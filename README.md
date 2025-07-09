@@ -64,7 +64,7 @@ soes=("simulated")
 
 ## Start Optimizations
 
-Needs forecasts in "results/{args.id}/{args.regex}.csv" and the daily files wich are generated after setup.
+Needs forecasts in "results/{id}/{regex}.csv" and the daily files wich are generated after setup.
 
 ```
 python src/main_optimisation.py -id {id} -regex {regex}"
