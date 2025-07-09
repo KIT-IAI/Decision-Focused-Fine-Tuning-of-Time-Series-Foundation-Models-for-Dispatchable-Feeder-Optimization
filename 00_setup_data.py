@@ -74,10 +74,10 @@ def parse_date_and_time_and_get_series(df):
     return pd.Series(values, idx)
 
 
-def generate_facotred_version_of_ausgrid_dataset(consumption_df, prodoction_df,
+def generate_factored_version_of_ausgrid_dataset(consumption_df, production_df,
                                                  consumption_factor,
                                                  production_factor, suffix):
-    results_df = consumption_df * consumption_factor - prodoction_df * production_factor
+    results_df = consumption_df * consumption_factor - production_df * production_factor
     print(
         f"Generated facotred version of the ausgrid dataset with the suffix {suffix}"
     )
@@ -215,29 +215,29 @@ def modify_ausgrid_dataset():
     ausgrid_prosumption.to_csv(
         "data/ausgrid_solar_home_dataset/ausgrid_prosumption.csv")
 
-    # generate a facotred version of the prosumption
+    # generate a factored version of the prosumption
     # load div2
-    generate_facotred_version_of_ausgrid_dataset(ausgrid_consumption,
+    generate_factored_version_of_ausgrid_dataset(ausgrid_consumption,
                                                  ausgrid_production, 0.5, 1,
                                                  "ldiv2")
     # load div5
-    generate_facotred_version_of_ausgrid_dataset(ausgrid_consumption,
+    generate_factored_version_of_ausgrid_dataset(ausgrid_consumption,
                                                  ausgrid_production, 0.2, 1,
                                                  "ldiv5")
     # load 5
-    generate_facotred_version_of_ausgrid_dataset(ausgrid_consumption,
+    generate_factored_version_of_ausgrid_dataset(ausgrid_consumption,
                                                  ausgrid_production, 5, 1,
                                                  "load5")
     # load 2
-    generate_facotred_version_of_ausgrid_dataset(ausgrid_consumption,
+    generate_factored_version_of_ausgrid_dataset(ausgrid_consumption,
                                                  ausgrid_production, 2, 1,
                                                  "load2")
     # pv factor5
-    generate_facotred_version_of_ausgrid_dataset(ausgrid_consumption,
+    generate_factored_version_of_ausgrid_dataset(ausgrid_consumption,
                                                  ausgrid_production, 1, 5,
                                                  "factor5")
     # pv factor10
-    generate_facotred_version_of_ausgrid_dataset(ausgrid_consumption,
+    generate_factored_version_of_ausgrid_dataset(ausgrid_consumption,
                                                  ausgrid_production, 1, 10,
                                                  "factor10")
 
