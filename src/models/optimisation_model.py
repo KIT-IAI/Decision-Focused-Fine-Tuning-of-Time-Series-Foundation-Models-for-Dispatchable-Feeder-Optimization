@@ -25,7 +25,7 @@ class OptiEstimator(nn.Module):
         x_0 = input[:,:42]
         # split the second 42 from the input
         x_1 = input[:,42:84]
-        #split the last value from the input
+        #split the last values from the input
         x_2 = input[:,84:]
     
         x_0 = F.selu(self.fc0_1(x_0))
