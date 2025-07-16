@@ -27,12 +27,9 @@ class OptiEstimator(nn.Module):
         x_1 = input[:,42:84]
         #split the last value from the input
         x_2 = input[:,84:]
-        # give the first 42 to the first layer
+    
         x_0 = F.selu(self.fc0_1(x_0))
-        # give the second 42 to the second layer
         x_1 = F.selu(self.fc0_2(x_1))
-        # give the last value to the third layer
-
 
         concat = torch.cat((x_0,x_1,x_2),1)
 
