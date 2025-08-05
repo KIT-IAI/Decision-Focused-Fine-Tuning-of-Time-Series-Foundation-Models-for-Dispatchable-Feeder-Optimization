@@ -1,10 +1,11 @@
 import pandas as pd
 import pyomo.environ as pyo
 import numpy as np
+import random
 
 from datetime import datetime, timedelta
 from functools import reduce
-import random
+
 class Opti:
     def __init__(self, number_houses):
         self.houses = ['house'+str(i) for i in np.arange(number_houses)]
@@ -201,31 +202,6 @@ class Opti:
               keys[1].date() == dates[1]}
         self.run_oneday_online(actual_e_online, actual_l, DS)
 
-
-    def run_oneday_deterministic_online_classi(self, estimated_e, actual_e, forecast_l_1, forecast_l_2, actual_l):
-        time = [keys[1] for keys in forecast_l_1.keys()]
-        time0 = [keys[1] for keys in actual_l.keys()][0]
-        dates = np.unique(np.array([time[i].date() for i in range(len(time))]))
-
-        # Compute DS
-        forecast_l_temp = {key: values for key, values in forecast_l_1.items() if key[1].date() >= dates[1]}
-        results_compute_ds = self.compute_ds_deterministic(estimated_e, forecast_l_temp)
-        self.results_to_dict(results_compute_ds, 'offline')
-
-        # Controlled ESS
-        e = {(key[0], time0): values for key, values in actual_e.items()}
-        DS = {(keys[0], keys[1]): values for keys, values in self.results_offline['g'].items() if
-              keys[1].day == dates[1].day}
-        self.run_oneday_online(e, actual_l, DS)
-
-        # Estimate SoE
-        e = {(key[0], key[1]): values for key, values in self.results_online['e'].items() if key[1].day == dates[1].day and key[1].hour == self.hour_start_computation}
-        DS = {(keys[0], keys[1]): values for keys, values in self.results_offline['g'].items() if
-              keys[1].day == dates[1].day and keys[1].hour >= self.hour_start_computation}
-        forecast_l_temp = {keys: values for keys, values in forecast_l_2.items() if keys[1].date() <= dates[1]}
-        self.estimate_soe(e, DS, forecast_l_temp)
-
-
     def run_firstday_deterministic(self, actual_e, forecast_l, actual_l):
         time = [keys[1] for keys in forecast_l.keys()]
         time0 = [keys[1] for keys in actual_l.keys()][0]
@@ -241,7 +217,6 @@ class Opti:
         DS = {(keys[0], keys[1]): values for keys, values in self.results_offline['g'].items() if
               keys[1].day == dates[1].day}
         self.run_oneday_online(e, actual_l, DS)
-
 
     def run_deterministic_same_forecasts(self, list_actual_e, list_path_forecast_l, list_path_actual_l,
                                          start_computation=None, end_computation=None):
@@ -380,94 +355,6 @@ class Opti:
                 self.dict_to_df(self.results_offline, self.results_offline_final)
                 self.dict_to_df(self.results_online, self.results_online_final)
 
-    def run_deterministic_online_classi_same_forecasts(self, list_estimated_e, list_actual_e,
-                                                       list_path_forecast_l_offline, list_path_actual_l, date):
-        forecast = []
-        actual = []
-        for i, house in enumerate(self.houses):
-            forecast.append(pd.read_csv(list_path_forecast_l_offline[i], parse_dates=["time"], index_col='time')[
-                            date - pd.Timedelta(days=1): date + pd.Timedelta(days=1)])
-            actual.append(pd.read_csv(list_path_actual_l[i], parse_dates=["time"], index_col='time', skiprows=0).loc[
-                              date])
-        timerange_forecast = [float(i) * pd.Timedelta(hours=self.delta) for i in forecast[0].columns]
-        timerange_actual = [float(i) * pd.Timedelta(hours=self.delta) for i in actual[0].index]
-
-        forecast_l = [[]] * 2
-        for t, time in enumerate(forecast[0].index):
-            series_forecast = []
-            series_actual = []
-            # Convert dataframe to dict
-            for i, house in enumerate(self.houses):
-                temp_forecast = pd.Series(forecast[i].loc[time])
-                temp_actual = actual[i]
-                temp_forecast.index = [time + j for j in timerange_forecast]
-                temp_actual.index = [date + j for j in timerange_actual]
-                series_forecast.append(temp_forecast)
-                series_actual.append(temp_actual)
-            forecast_l[t] = pd.concat(series_forecast, keys=self.houses)
-            actual_l = pd.concat(series_actual, keys=self.houses)
-
-        # Run OP
-        estimated_e = {(house, actual[0].index[0]): list_estimated_e[h] for h, house in enumerate(self.houses)}
-        actual_e = {(house, actual[0].index[0]): list_actual_e[h] for h, house in enumerate(self.houses)}
-        self.clear_dict(self.results_online)
-        self.clear_dict(self.results_offline)
-        self.clear_dict(self.results_estimate_soe)
-        self.run_oneday_deterministic_online_classi(estimated_e, actual_e, forecast_l[0], forecast_l[1], actual_l)
-        # save results
-        self.dict_to_df(self.results_offline, self.results_offline_final)
-        self.dict_to_df(self.results_online, self.results_online_final)
-        self.dict_to_df(self.results_estimate_soe, self.results_estimate_soe_final)
-
-    def run_deterministic_online_classi(self, list_estimated_e, list_actual_e, list_path_estimate_soe,
-                                        list_path_forecast_l_offline, list_path_actual_l, date):
-        forecast_estimate_soe = []
-        forecast_offline = []
-        actual = []
-        for i, house in enumerate(self.houses):
-            forecast_estimate_soe.append(
-                pd.read_csv(list_path_estimate_soe[i], parse_dates=["time"], index_col='time').loc[f'{date.date()}'])
-            forecast_offline.append(
-                pd.read_csv(list_path_forecast_l_offline[i], parse_dates=["time"], index_col='time').loc[
-                    f'{date.date() - pd.Timedelta(days=1)}'])
-            actual.append(pd.read_csv(list_path_actual_l[i], parse_dates=["time"], index_col='time', skiprows=0).loc[
-                              f'{date.date()}'])
-
-        series_forecast_estimate_soe = []
-        series_forecast_offline = []
-        series_actual = []
-        for i, house in enumerate(self.houses):
-            temp_forecast_estimate_soe = forecast_estimate_soe[i].squeeze(axis=0)
-            temp_forecast_offline = forecast_offline[i].squeeze(axis=0)
-            temp_actual = actual[i].squeeze(axis=0)
-            temp_forecast_estimate_soe.index = [temp_forecast_estimate_soe.name + j for j in
-                                                [float(i) * pd.Timedelta(hours=self.delta) for i in
-                                                 temp_forecast_estimate_soe.index]]
-            temp_forecast_offline.index = [temp_forecast_offline.name + j for j in
-                                           [float(i) * pd.Timedelta(hours=self.delta) for i in
-                                            temp_forecast_offline.index]]
-            temp_actual.index = [temp_actual.name + j for j in
-                                 [float(i) * pd.Timedelta(hours=self.delta) for i in temp_actual.index]]
-            series_forecast_estimate_soe.append(temp_forecast_estimate_soe)
-            series_forecast_offline.append(temp_forecast_offline)
-            series_actual.append(temp_actual)
-        forecast_l_estimate_soe = pd.concat(series_forecast_estimate_soe, keys=self.houses)
-        forecast_l_offline = pd.concat(series_forecast_offline, keys=self.houses)
-        actual_l = pd.concat(series_actual, keys=self.houses)
-
-        # Run OP
-        estimated_e = {(house, date): list_estimated_e[h] for h, house in enumerate(self.houses)}
-        actual_e = {(house, date): list_actual_e[h] for h, house in enumerate(self.houses)}
-        self.clear_dict(self.results_online)
-        self.clear_dict(self.results_offline)
-        self.clear_dict(self.results_estimate_soe)
-        self.run_oneday_deterministic_online_classi(estimated_e, actual_e, forecast_l_offline, forecast_l_estimate_soe,
-                                                    actual_l)
-        # save results
-        self.dict_to_df(self.results_offline, self.results_offline_final)
-        self.dict_to_df(self.results_online, self.results_online_final)
-        self.dict_to_df(self.results_estimate_soe, self.results_estimate_soe_final)
-
     def run_deterministic_fixed_soe(self, list_e, list_path_forecast_l, list_path_actual_l, start_computation=None,
                                     end_computation=None):
         self.forecast_path_list = list_path_forecast_l
@@ -512,8 +399,6 @@ class Opti:
             self.dict_to_df(self.results_offline, self.results_offline_final)
             self.dict_to_df(self.results_online, self.results_online_final)
 
-
-
     def define_constraints(self, model):
         ##g = p + l
         def constr_power_flow(model, i, j):
@@ -550,7 +435,6 @@ class Opti:
 
         model.constr_g_max = pyo.Constraint(model.indices_time, rule=constr_g_max)
 
-
     def define_variables(self, model):
         model.g = pyo.Var(model.indices)
         model.p = pyo.Var(model.indices)
@@ -579,7 +463,6 @@ class Opti:
                 results_dict[key][u] = vv.value
         setattr(self, 'results_' + string_level, results_dict)
 
-
     def dict_to_df(self, dicti, dicti_final):
         #time = np.arange(len(np.unique(np.array([keys[1] for keys in variables.keys()]))))
         for vari in dicti:
@@ -592,7 +475,6 @@ class Opti:
     def clear_dict(self, dicti):
         for key in dicti:
             dicti[key] = {}
-
     
     def calculate_ds_costs_daily(self, str_house):
         self.ds_costs_daily = reduce(lambda a, b: a.add(b, fill_value=0), [
