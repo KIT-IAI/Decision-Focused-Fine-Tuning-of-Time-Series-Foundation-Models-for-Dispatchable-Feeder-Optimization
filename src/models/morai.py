@@ -1,7 +1,8 @@
-from uni2ts.model.moirai import MoiraiForecast, MoiraiModule
-from sktime.libs.uni2ts.forecast import MoiraiForecast
+from uni2ts.model.moirai import MoiraiForecast
+from sktime.libs.uni2ts.forecast import MoiraiForecast as SktimeMoiraiForecast
 from huggingface_hub import hf_hub_download
 from torch import nn
+
 
 def morai_refresh(morai_config):
     """
@@ -29,7 +30,7 @@ def morai_refresh(morai_config):
                     repo_id=f"sktime/moirai-1.0-R-{size}", filename="model.ckpt"
                 )
 
-    sktime_moirai_module = MoiraiForecast.load_from_checkpoint(
+    sktime_moirai_module = SktimeMoiraiForecast.load_from_checkpoint(
     **{"checkpoint_path": checkpoint},
     **{'prediction_length': pdt, 'context_length': ctx, 'patch_size': psz, 
                                          'num_samples': 100, 'target_dim': 1, 'feat_dynamic_real_dim': 0, 'past_feat_dynamic_real_dim': 0, 
